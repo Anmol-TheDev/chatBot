@@ -1,4 +1,6 @@
-import Background from './Background';
+import { lazy, Suspense } from 'react';
+
+const Background = lazy(() => import('./Background'));
 import { Navigation } from './components/Navigation';
 import { HeroSection } from './components/HeroSection';
 
@@ -12,7 +14,9 @@ function App() {
       
       {/* Particle Effect Layer - Interactive background */}
       <div className="fixed inset-0 z-0">
-        <Background />
+        <Suspense fallback={null}>
+          <Background />
+        </Suspense>
       </div>
       
       {/* Radial Gradient Overlay */}
