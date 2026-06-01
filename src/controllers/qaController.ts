@@ -1,7 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { catchAsync } from '../utils/catchAsync.js';
 
-export const createQA = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+export const createQA: RequestHandler = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   // TODO: Implement QA creation logic
   // This would typically create question-answer pairs in the database
   
@@ -26,7 +26,7 @@ export const createQA = catchAsync(async (req: Request, res: Response, next: Nex
   });
 });
 
-export const deleteQA = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+export const deleteQA: RequestHandler = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   // TODO: Implement QA deletion logic
   // This would typically delete a QA pair from the database
   

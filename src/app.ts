@@ -38,7 +38,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // Handle undefined routes
-app.all('*', (req: Request, res: Response, next: NextFunction) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   const error = new Error(`Route ${req.originalUrl} not found`) as any;
   error.statusCode = 404;
   next(error);
