@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/database.js';
 import globalErrorHandler from './middleware/errorHandler.js';
+import { handleMulterError } from './middleware/multerErrorHandler.js';
 import AppError from './utils/AppError.js';
 
 // Import routes
@@ -42,6 +43,9 @@ app.get('/health', (req: Request, res: Response) => {
 app.use((req: Request, res: Response, next: NextFunction) => {
   next(new AppError(`Route ${req.originalUrl} not found`, 404));
 });
+
+// Multer error handling middleware
+app.use(handleMulterError);
 
 // Global error handling middleware
 app.use(globalErrorHandler);

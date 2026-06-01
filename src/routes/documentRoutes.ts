@@ -1,10 +1,14 @@
 import { Router } from 'express';
-import { uploadDocument } from '../controllers/documentController.js';
+import { uploadDocument, getDocuments, getDocument, deleteDocument } from '../controllers/documentController.js';
 import { authenticate } from '../middleware/auth.js';
+import upload from '../config/multer.js';
 
 const router = Router();
 
-// Protected route - only admin can upload documents
-router.post('/upload', authenticate, uploadDocument);
+// Protected routes - only admin can manage documents
+router.post('/upload', authenticate, upload.single('document'), uploadDocument);
+router.get('/', authenticate, getDocuments);
+router.get('/:id', authenticate, getDocument);
+router.delete('/:id', authenticate, deleteDocument);
 
 export default router;
