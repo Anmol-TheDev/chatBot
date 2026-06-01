@@ -1,0 +1,60 @@
+meta {
+  name: Admin Login
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/admin/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "admin@example.com",
+    "password": "123456"
+  }
+}
+
+tests {
+  test("should return JWT token", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("success");
+    expect(res.getBody().token).to.be.a("string");
+    
+    // Store token for other requests
+    bru.setEnvVar("adminToken", res.getBody().token);
+  });
+}
+
+docs {
+  # Admin Login
+  
+  Authenticate admin user and receive JWT token for protected endpoints.
+  
+  ## Request Body
+  ```json
+  {
+    "email": "admin@example.com",
+    "password": "123456"
+  }
+  ```
+  
+  ## Success Response (200)
+  ```json
+  {
+    "status": "success",
+    "message": "Login successful",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+  ```
+  
+  ## Error Response (401)
+  ```json
+  {
+    "status": "fail",
+    "message": "Invalid email or password"
+  }
+  ```
+}

@@ -1,0 +1,51 @@
+meta {
+  name: Delete QA
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/api/qa/qa_1704067200000
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("should delete QA successfully", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("success");
+    expect(res.getBody().data).to.equal(null);
+  });
+}
+
+docs {
+  # Delete Q&A Pair
+  
+  Delete a specific question-answer pair from the system.
+  
+  **Authentication Required:** Admin JWT token
+  
+  ## URL Parameters
+  - `id` (string): ID of the Q&A pair to delete
+  
+  ## Success Response (200)
+  ```json
+  {
+    "status": "success",
+    "message": "QA with ID qa_1704067200000 deleted successfully",
+    "data": null
+  }
+  ```
+  
+  ## Error Response (400)
+  ```json
+  {
+    "status": "fail",
+    "message": "QA ID is required"
+  }
+  ```
+}
