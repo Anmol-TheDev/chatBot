@@ -5,7 +5,9 @@ import connectDB from './config/database.js';
 import globalErrorHandler from './middleware/errorHandler.js';
 
 // Import routes
-import userRoutes from './routes/userRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import documentRoutes from './routes/documentRoutes.js';
+import qaRoutes from './routes/qaRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -22,7 +24,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Routes
-app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/qa', qaRoutes);
 
 // Health check route
 app.get('/health', (req: Request, res: Response) => {
