@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 import jwt, { type SignOptions } from "jsonwebtoken";
 import { catchAsync } from "../utils/catchAsync.js";
+import AppError from "../utils/AppError.js";
 
 interface LoginRequest extends Request {
   body: {
@@ -10,13 +11,11 @@ interface LoginRequest extends Request {
 }
 
 export const adminLogin: RequestHandler = catchAsync(
-  async (req: LoginRequest, res: Response, next: NextFunction) => {
+  async (req: LoginRequest, res: Response, next: NextFunction): Promise<void> => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      const error = new Error("Email and password are required") as any;
-      error.statusCode = 400;
-      return next(error);
+      return next(new AppError("Email and password are required", 400));
     }
 
     // Check admin credentials from environment variables
@@ -25,16 +24,12 @@ export const adminLogin: RequestHandler = catchAsync(
     const jwtSecret = process.env.JWT_SECRET;
 
     if (!adminEmail || !adminPassword || !jwtSecret) {
-      const error = new Error("Server configuration error") as any;
-      error.statusCode = 500;
-      return next(error);
+      return next(new AppError("Server configuration error", 500));
     }
 
     // Verify credentials
     if (email !== adminEmail || password !== adminPassword) {
-      const error = new Error("Invalid email or password") as any;
-      error.statusCode = 401;
-      return next(error);
+      return next(new AppError("Invalid email or password", 401));
     }
 
     // Generate JWT token

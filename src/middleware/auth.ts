@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import AppError from '../utils/AppError.js';
 
 interface AuthenticatedRequest extends Request {
   admin?: {
@@ -21,18 +22,14 @@ export const authenticate = (req: AuthenticatedRequest, res: Response, next: Nex
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      const error = new Error('Access denied. No token provided or invalid format') as any;
-      error.statusCode = 401;
-      return next(error);
+      return next(new AppError('Access denied. No token provided or invalid format', 401));
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     const jwtSecret = process.env.JWT_SECRET;
 
     if (!jwtSecret) {
-      const error = new Error('Server configuration error') as any;
-      error.statusCode = 500;
-      return next(error);
+      return next(new AppError('Server configuration error', 500));
     }
 
     // Verify token
@@ -40,9 +37,7 @@ export const authenticate = (req: AuthenticatedRequest, res: Response, next: Nex
     
     // Check if user is admin
     if (decoded.role !== 'admin') {
-      const error = new Error('Access denied. Admin privileges required') as any;
-      error.statusCode = 403;
-      return next(error);
+      return next(new AppError('Access denied. Admin privileges required', 403));
     }
 
     // Add admin info to request object
@@ -50,15 +45,11 @@ export const authenticate = (req: AuthenticatedRequest, res: Response, next: Nex
     next();
   } catch (error: any) {
     if (error.name === 'JsonWebTokenError') {
-      const customError = new Error('Invalid token') as any;
-      customError.statusCode = 401;
-      return next(customError);
+      return next(new AppError('Invalid token', 401));
     }
     
     if (error.name === 'TokenExpiredError') {
-      const customError = new Error('Token expired') as any;
-      customError.statusCode = 401;
-      return next(customError);
+      return next(new AppError('Token expired', 401));
     }
 
     next(error);
@@ -68,15 +59,11 @@ export const authenticate = (req: AuthenticatedRequest, res: Response, next: Nex
 export const authorize = (...roles: string[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.admin) {
-      const error = new Error('Access denied. Authentication required') as any;
-      error.statusCode = 401;
-      return next(error);
+      return next(new AppError('Access denied. Authentication required', 401));
     }
 
     if (!roles.includes(req.admin.role)) {
-      const error = new Error('Access denied. Insufficient privileges') as any;
-      error.statusCode = 403;
-      return next(error);
+      return next(new AppError('Access denied. Insufficient privileges', 403));
     }
 
     next();

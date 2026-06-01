@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { catchAsync } from '../utils/catchAsync.js';
+import AppError from '../utils/AppError.js';
 
 export const createQA: RequestHandler = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   // TODO: Implement QA creation logic
@@ -8,9 +9,7 @@ export const createQA: RequestHandler = catchAsync(async (req: Request, res: Res
   const { question, answer } = req.body;
   
   if (!question || !answer) {
-    const error = new Error('Question and answer are required') as any;
-    error.statusCode = 400;
-    return next(error);
+    return next(new AppError('Question and answer are required', 400));
   }
 
   res.status(201).json({
@@ -33,9 +32,7 @@ export const deleteQA: RequestHandler = catchAsync(async (req: Request, res: Res
   const { id } = req.params;
   
   if (!id) {
-    const error = new Error('QA ID is required') as any;
-    error.statusCode = 400;
-    return next(error);
+    return next(new AppError('QA ID is required', 400));
   }
 
   res.status(200).json({
