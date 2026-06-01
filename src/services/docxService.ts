@@ -173,11 +173,13 @@ export class DOCXService {
     let match;
     
     while ((match = headingRegex.exec(html)) !== null) {
-      headings.push({
-        level: parseInt(match[1]),
-        text: match[2].replace(/<[^>]*>/g, '').trim(),
-        position: match.index
-      });
+      if (match[1] && match[2]) {
+        headings.push({
+          level: parseInt(match[1]),
+          text: match[2].replace(/<[^>]*>/g, '').trim(),
+          position: match.index
+        });
+      }
     }
     
     return headings;

@@ -3,9 +3,20 @@ import multer from 'multer';
 import AppError from '../utils/AppError.js';
 
 export const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
+  // Handle Cloudinary signature errors
+  if (typeof err === 'string' && err.includes('Invalid Signature')) {
+    return next(new AppError('File upload service configuration error. Please check Cloudinary API credentials.', 500));
+  }
+
   // Handle Cloudinary configuration errors
   if (typeof err === 'string' && err.includes('api_key')) {
     return next(new AppError('File upload service is not properly configured. Please contact administrator.', 500));
+  }
+
+  // Handle Cloudinary API errors
+  if (err.message && (err.message.includes('Invalid Signature') || err.message.includes('cloudinary'))) {
+    console.error('Cloudinary error:', err.message);
+    return next(new AppError('File upload service error. Please check configuration and try again.', 500));
   }
 
   if (err instanceof multer.MulterError) {

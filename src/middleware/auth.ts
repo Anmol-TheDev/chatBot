@@ -1,19 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import AppError from '../utils/AppError.js';
+import { verifyToken, type TokenPayload } from '../utils/jwt.js';
 
 interface AuthenticatedRequest extends Request {
-  admin?: {
-    email: string;
-    role: string;
-    iat: number;
-  };
-}
-
-interface JwtPayload {
-  email: string;
-  role: string;
-  iat: number;
+  admin?: TokenPayload;
 }
 
 export const authenticate = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -26,14 +16,9 @@ export const authenticate = (req: AuthenticatedRequest, res: Response, next: Nex
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    const jwtSecret = process.env.JWT_SECRET;
 
-    if (!jwtSecret) {
-      return next(new AppError('Server configuration error', 500));
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
+    // Verify token using centralized utility
+    const decoded = verifyToken(token);
     
     // Check if user is admin
     if (decoded.role !== 'admin') {

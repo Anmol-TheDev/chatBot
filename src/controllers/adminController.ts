@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
-import jwt, { type SignOptions } from "jsonwebtoken";
 import { catchAsync } from "../utils/catchAsync.js";
 import AppError from "../utils/AppError.js";
+import { generateToken } from "../utils/jwt.js";
+import { authConfig } from "../config/env.js";
 
 interface LoginRequest extends Request {
   body: {
@@ -18,32 +19,16 @@ export const adminLogin: RequestHandler = catchAsync(
       return next(new AppError("Email and password are required", 400));
     }
 
-    // Check admin credentials from environment variables
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    const jwtSecret = process.env.JWT_SECRET;
-
-    if (!adminEmail || !adminPassword || !jwtSecret) {
-      return next(new AppError("Server configuration error", 500));
-    }
-
     // Verify credentials
-    if (email !== adminEmail || password !== adminPassword) {
+    if (email !== authConfig.ADMIN_EMAIL || password !== authConfig.ADMIN_PASSWORD) {
       return next(new AppError("Invalid email or password", 401));
     }
 
     // Generate JWT token
-    const token = jwt.sign(
-      {
-        email: adminEmail,
-        role: "admin",
-        iat: Math.floor(Date.now() / 1000),
-      },
-      jwtSecret,
-      {
-        expiresIn: process.env.JWT_EXPIRES_IN as SignOptions["expiresIn"],
-      },
-    );
+    const token = generateToken({
+      email: authConfig.ADMIN_EMAIL,
+      role: "admin",
+    });
 
     res.status(200).json({
       status: "success",

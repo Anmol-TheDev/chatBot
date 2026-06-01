@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import { serverConfig } from '../config/env.js';
 
 interface CustomError extends Error {
   statusCode?: number;
@@ -26,7 +27,7 @@ const globalErrorHandler = (
   // Log error for debugging
   console.error('❌ Error:', {
     message: err.message,
-    stack: err.stack,
+    stack: serverConfig.SHOW_STACK_TRACE ? err.stack : undefined,
     url: req.originalUrl,
     method: req.method,
     ip: req.ip,
@@ -34,12 +35,12 @@ const globalErrorHandler = (
   });
 
   // Development error response
-  if (process.env.NODE_ENV === 'development') {
+  if (serverConfig.NODE_ENV === 'development') {
     res.status(err.statusCode).json({
       status: err.status,
       error: err,
       message: err.message,
-      stack: err.stack
+      stack: serverConfig.SHOW_STACK_TRACE ? err.stack : undefined
     });
   } else {
     // Production error response

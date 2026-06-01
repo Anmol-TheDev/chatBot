@@ -5,6 +5,7 @@ import DocumentModel from '../models/Document.js';
 import TextChunkModel from '../models/TextChunk.js';
 import { TextExtractionService } from '../services/textExtraction.js';
 import { CloudinaryService } from '../services/cloudinaryService.js';
+import { isCloudinaryConfigured } from '../config/cloudinary.js';
 
 interface UploadRequest extends Request {
   file?: Express.Multer.File & {
@@ -14,6 +15,11 @@ interface UploadRequest extends Request {
 }
 
 export const uploadDocument: RequestHandler = catchAsync(async (req: UploadRequest, res: Response, next: NextFunction): Promise<void> => {
+  // Check if Cloudinary is properly configured
+  if (!isCloudinaryConfigured()) {
+    return next(new AppError('File upload is currently unavailable. Cloudinary configuration is incomplete.', 503));
+  }
+
   // Check if file was uploaded
   if (!req.file) {
     return next(new AppError('No file uploaded. Please select a file to upload.', 400));

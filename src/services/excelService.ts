@@ -35,6 +35,11 @@ export class ExcelService {
       for (const sheetName of workbook.SheetNames) {
         const worksheet = workbook.Sheets[sheetName];
         
+        if (!worksheet) {
+          console.warn(`Worksheet "${sheetName}" not found`);
+          continue;
+        }
+        
         // Convert sheet to array of arrays
         const sheetData = XLSX.utils.sheet_to_json(worksheet, { 
           header: 1,
@@ -101,6 +106,12 @@ export class ExcelService {
         }
 
         const worksheet = workbook.Sheets[sheetName];
+        
+        if (!worksheet) {
+          console.warn(`Worksheet "${sheetName}" not found`);
+          continue;
+        }
+        
         const sheetData = XLSX.utils.sheet_to_json(worksheet, { 
           header: 1,
           defval: '',
@@ -153,7 +164,7 @@ export class ExcelService {
       // Use first sheet if no sheet name specified
       const targetSheet = sheetName || workbook.SheetNames[0];
       
-      if (!workbook.Sheets[targetSheet]) {
+      if (!targetSheet || !workbook.Sheets[targetSheet]) {
         throw new Error(`Sheet "${targetSheet}" not found`);
       }
 
