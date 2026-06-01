@@ -25,14 +25,17 @@ export interface AnswerResult {
 
 export class QuestionAnsweringService {
   /**
-   * Answer a question using the knowledge base with AI enhancement
+   * Answer a question using the knowledge base with AI enhancement (streaming)
    */
-  static async answerQuestion(question: string): Promise<AnswerResult> {
+  static async answerQuestionStream(
+    question: string,
+    onToken: (text: string) => void
+  ): Promise<Omit<AnswerResult, 'answer'> & { answer?: string }> {
     // First, try to find an exact match in Q&A pairs
     const exactMatch = await this.findExactQAMatch(question);
     if (exactMatch) {
+      onToken(exactMatch.answer);
       return {
-        answer: exactMatch.answer,
         sources: [],
         confidence: 'high',
         type: 'exact_match',
@@ -63,12 +66,11 @@ export class QuestionAnsweringService {
         }));
 
         // Generate AI response
-        const aiResponse = await GeminiService.generateAnswer(question, documentChunks, qaPairs);
+        const meta = await GeminiService.generateAnswerStream(question, documentChunks, qaPairs, onToken);
 
         return {
-          answer: aiResponse.answer,
-          sources: aiResponse.sources,
-          confidence: aiResponse.confidence,
+          sources: meta.sources,
+          confidence: meta.confidence,
           type: 'ai_generated',
           aiGenerated: true
         };
@@ -84,10 +86,10 @@ export class QuestionAnsweringService {
       if (GeminiService.isAvailable()) {
         try {
           const simpleResponse = await GeminiService.generateSimpleResponse(question);
+          onToken(simpleResponse);
           const suggestedQuestions = await this.getSampleQuestions(5);
           
           return {
-            answer: simpleResponse,
             sources: [],
             confidence: 'low',
             type: 'ai_generated',
@@ -101,9 +103,9 @@ export class QuestionAnsweringService {
 
       // Get suggested questions for fallback
       const suggestedQuestions = await this.getSampleQuestions(5);
+      onToken("I don't have specific information to answer that question. You can try asking one of the suggested questions, or upload relevant documents to expand my knowledge base.");
 
       return {
-        answer: "I couldn't find relevant information to answer your question. Please try rephrasing your question or check if the relevant documents have been uploaded.",
         sources: [],
         confidence: 'low',
         type: 'not_found',
@@ -114,9 +116,9 @@ export class QuestionAnsweringService {
 
     // Generate answer based on relevant chunks (traditional method)
     const answer = this.generateAnswerFromChunks(question, relevantChunks);
+    onToken(answer);
     
     return {
-      answer,
       sources: relevantChunks,
       confidence: relevantChunks.length > 2 ? 'high' : 'medium',
       type: 'document_based',
@@ -259,14 +261,14 @@ export class QuestionAnsweringService {
         });
       }
 
-      // PRIORITY 3: Only if we still don't have enough, add generic questions
+      // PRIORITY 3: Only if we still don't have enough, add helpful generic questions
       if (sampleQuestions.length < limit) {
         const genericQuestions = [
-          "What information do you have available?",
-          "What topics can you help me with?",
-          "What documents have been uploaded?",
-          "Can you summarize the available information?",
-          "What questions can I ask you?"
+          "How does this chatbot work?",
+          "What kind of questions can I ask?",
+          "Can you help me get started?",
+          "What features are available?",
+          "How do I upload documents?"
         ];
 
         genericQuestions.forEach(q => {
@@ -280,9 +282,9 @@ export class QuestionAnsweringService {
     } catch (error) {
       console.error('Error getting sample questions:', error);
       return [
-        "What information do you have available?",
-        "What topics can you help me with?",
-        "What can I ask you about?"
+        "How does this chatbot work?",
+        "What kind of questions can I ask?",
+        "Can you help me get started?"
       ];
     }
   }

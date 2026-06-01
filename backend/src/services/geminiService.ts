@@ -1,8 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { geminiConfig } from '../config/env.js';
-import QAModel from '../models/QA.js';
-import DocumentModel from '../models/Document.js';
-
 export interface GeminiResponse {
   answer: string;
   confidence: 'high' | 'medium' | 'low';
@@ -24,8 +21,8 @@ export class GeminiService {
 
     if (!this.genAI) {
       this.genAI = new GoogleGenerativeAI(geminiConfig.GEMINI_API_KEY);
-      // Use gemini-3.5-flash as the primary model
-      this.model = this.genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
+      // Use gemini-3.1-flash-lite as the primary model (most stable and available)
+      this.model = this.genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
     }
 
     return true;
@@ -38,11 +35,12 @@ export class GeminiService {
     return !!geminiConfig.GEMINI_API_KEY;
   }
 
-  static async generateAnswer(
+  static async generateAnswerStream(
     question: string,
     documentChunks: Array<{ content: string; documentName: string; relevanceScore: number }>,
-    qaPairs: Array<{ question: string; answer: string; similarity: number }>
-  ): Promise<GeminiResponse> {
+    qaPairs: Array<{ question: string; answer: string; similarity: number }>,
+    onToken: (text: string) => void
+  ): Promise<{ confidence: 'high' | 'medium' | 'low'; sources: string[] }> {
     if (!this.initialize()) {
       throw new Error('Gemini AI is not configured. Please add GEMINI_API_KEY to your environment variables.');
     }
@@ -54,35 +52,39 @@ export class GeminiService {
       // Create the prompt
       const prompt = this.createPrompt(question, context);
 
-      // Generate response with retry logic
+      // Try multiple models in sequence with better error handling
+      const modelsToTry = ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
       let result;
-      try {
-        result = await this.model.generateContent(prompt);
-      } catch (error: any) {
-        // If the current model fails, try with fallback models
-        if (error.status === 404) {
-          console.log('Primary model (gemini-3.5-flash) failed, trying fallback models...');
+      let successfulModel = null;
+
+      for (const modelName of modelsToTry) {
+        try {
+          console.log(`Attempting to use model: ${modelName}`);
+          this.model = this.genAI!.getGenerativeModel({ model: modelName });
+          result = await this.model.generateContentStream(prompt);
+          successfulModel = modelName;
+          console.log(`Successfully connected to ${modelName}`);
+          break;
+        } catch (error: any) {
+          console.error(`Model ${modelName} failed:`, error.message, `(Status: ${error.status || 'N/A'})`);
           
-          // Try gemini-1.5-flash first
-          try {
-            this.model = this.genAI!.getGenerativeModel({ model: 'gemini-1.5-flash' });
-            result = await this.model.generateContent(prompt);
-          } catch (fallbackError: any) {
-            // If that fails, try gemini-pro
-            console.log('gemini-1.5-flash failed, trying gemini-pro...');
-            this.model = this.genAI!.getGenerativeModel({ model: 'gemini-pro' });
-            result = await this.model.generateContent(prompt);
+          // If it's the last model, throw the error
+          if (modelName === modelsToTry[modelsToTry.length - 1]) {
+            throw new Error(`All Gemini models failed. Last error: ${error.message} (Status: ${error.status || 'N/A'})`);
           }
-        } else {
-          throw error;
+          // Otherwise, continue to next model
         }
       }
 
-      const response = await result.response;
-      const answer = response.text();
+      if (!result) {
+        throw new Error('Failed to generate response from any available model');
+      }
 
-      // Validate the response to ensure it's using the context
-      const validatedAnswer = this.validateAndCleanResponse(answer, documentChunks, qaPairs);
+      // Stream the response
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        onToken(chunkText);
+      }
 
       // Determine confidence based on available context
       const confidence = this.determineConfidence(documentChunks, qaPairs);
@@ -91,7 +93,6 @@ export class GeminiService {
       const sources = this.extractSources(documentChunks, qaPairs);
 
       return {
-        answer: validatedAnswer,
         confidence,
         sources
       };
@@ -138,35 +139,41 @@ export class GeminiService {
    */
   private static createPrompt(question: string, context: string): string {
     if (!context.trim()) {
-      // If no context is available, be more focused
-      return `You are a specialized chatbot assistant. The user asked: "${question}"
+      // If no context is available, provide a helpful but focused response
+      return `You are a helpful chatbot assistant for a document-based Q&A system. The user asked: "${question}"
 
-You don't have specific information about this topic. Respond politely but stay focused on your role as an information assistant.
+Currently, you don't have any documents or Q&A pairs in your knowledge base to answer this question.
 
-Guidelines:
-- Don't offer help with random topics you can't actually assist with
-- Be polite but direct about your limitations
-- Suggest they ask questions related to topics you might have information about
-- Keep it brief and professional
+Provide a brief, helpful response (2-3 sentences max) that:
+1. Politely acknowledges you don't have information about this specific topic
+2. Explains that you can answer questions once documents are uploaded or Q&A pairs are added
+3. Stays professional and encouraging
 
-Example response: "I don't have information about that topic. I'm designed to help with specific questions based on available information. Is there something else I can help you with?"`;
+Do NOT:
+- Offer to help with unrelated topics
+- Make up information
+- Be overly chatty or offer services you can't provide
+- Include phrases like "fun facts" or "recommendations"
+
+Your response:`;
     }
 
-    return `You are a focused chatbot assistant. Answer the user's question using the information provided below.
+    return `You are a focused chatbot assistant. Answer the user's question using ONLY the information provided below.
 
 ${context}
 
 User Question: ${question}
 
 Instructions:
-1. Use the provided information to give accurate answers
-2. Stay focused on the information you have
-3. Don't offer help with topics outside your scope
-4. Be helpful but professional
-5. If the information is limited, acknowledge it briefly
-6. Don't make promises about helping with unrelated topics
+1. Answer based ONLY on the provided information
+2. Be direct and concise
+3. If the information doesn't fully answer the question, acknowledge the limitation briefly
+4. Do NOT mention "Q1/A1", "knowledge base", "document chunks", or technical terms
+5. Write naturally as if you're having a conversation
+6. Do NOT offer help with unrelated topics
+7. Keep your response focused and under 4 sentences unless more detail is needed
 
-Your focused response:`;
+Your response:`;
   }
 
   /**
@@ -258,7 +265,6 @@ Your focused response:`;
     // Remove extra whitespace and clean up
     naturalAnswer = naturalAnswer.replace(/\s+/g, ' ').trim();
     
-    // If the answer is too short or empty after cleaning, provide a focused fallback
     if (naturalAnswer.length < 20) {
       if (documentChunks.length > 0 || qaPairs.length > 0) {
         return "I can help answer questions based on available information. What would you like to know?";
@@ -312,67 +318,6 @@ Your focused response:`;
     return sources;
   }
 
-  /**
-   * Get sample questions from available data (prioritizing DB questions)
-   */
-  private static async getSampleQuestions(limit: number = 5): Promise<string[]> {
-    try {
-      const sampleQuestions: string[] = [];
-
-      // PRIORITY 1: Get actual questions from Q&A database (most important)
-      const qaQuestions = await QAModel.find()
-        .select('question')
-        .limit(limit) // Get up to the full limit from Q&A
-        .sort({ createdAt: -1 });
-
-      // Add all available Q&A questions first
-      qaQuestions.forEach(qa => {
-        sampleQuestions.push(qa.question);
-      });
-
-      // PRIORITY 2: Only if we don't have enough Q&A questions, add document-based questions
-      if (sampleQuestions.length < limit) {
-        const remainingSlots = limit - sampleQuestions.length;
-        const documents = await DocumentModel.find()
-          .select('fileName')
-          .limit(remainingSlots)
-          .sort({ uploadedAt: -1 });
-
-        documents.forEach(doc => {
-          if (sampleQuestions.length < limit) {
-            const fileName = doc.fileName.replace(/\.[^/.]+$/, ""); // Remove extension
-            sampleQuestions.push(`What is ${fileName} about?`);
-          }
-        });
-      }
-
-      // PRIORITY 3: Only if we still don't have enough, add generic questions
-      if (sampleQuestions.length < limit) {
-        const genericQuestions = [
-          "What information do you have available?",
-          "What topics can you help me with?",
-          "What documents have been uploaded?",
-          "Can you summarize the available information?",
-          "What questions can I ask you?"
-        ];
-
-        genericQuestions.forEach(q => {
-          if (sampleQuestions.length < limit && !sampleQuestions.includes(q)) {
-            sampleQuestions.push(q);
-          }
-        });
-      }
-
-      return sampleQuestions.slice(0, limit);
-    } catch (error) {
-      console.error('Error getting sample questions:', error);
-      return [
-        "What information do you have available?",
-        "What topics can you help me with?",
-        "What can I ask you about?"
-      ];
-    }
-  }
 
   /**
    * Generate a simple response without context (fallback)
@@ -382,13 +327,47 @@ Your focused response:`;
       throw new Error('Gemini AI is not configured');
     }
 
-    try {
-      // Return a clean response without embedded questions
-      return "I don't have specific information about that topic. You can try asking one of the suggested questions below.";
-    } catch (error: any) {
-      console.error('Gemini simple response error:', error);
-      return "I don't have information about that topic. Please try one of the suggested questions.";
+    const prompt = `You are a helpful chatbot assistant for a document Q&A system. The user said: "${question}"
+
+You currently don't have any documents or Q&A pairs in your knowledge base.
+
+Provide a brief, friendly response (1-2 sentences max) that:
+1. Greets the user if they're saying hello/hi
+2. Briefly mentions you can help answer questions once documents are uploaded
+3. Keep it natural and conversational
+
+Examples:
+- For "hello": "Hello! I'm here to help answer questions. Once you upload some documents, I'll be able to assist you with information from them."
+- For "hi": "Hi there! I can help answer questions based on uploaded documents. Feel free to upload some documents to get started."
+- For other questions: "I don't have information about that yet. Upload some documents and I'll be able to help answer your questions."
+
+Your response (keep it under 2 sentences):`;
+
+    // Try multiple models in sequence
+    const modelsToTry = ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+    
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`Trying model: ${modelName}`);
+        this.model = this.genAI!.getGenerativeModel({ model: modelName });
+        const result = await this.model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text().trim();
+        console.log(`Successfully generated response with ${modelName}`);
+        return text;
+      } catch (error: any) {
+        console.error(`Model ${modelName} failed:`, error.message, `(Status: ${error.status || 'N/A'})`);
+        // Continue to next model
+        if (modelName === modelsToTry[modelsToTry.length - 1]) {
+          // Last model failed, return fallback
+          console.error('All Gemini models failed, using fallback response');
+          return "Hello! I'm here to help answer questions. Once you upload some documents, I'll be able to assist you with information from them.";
+        }
+      }
     }
+
+    // Fallback if all models fail
+    return "Hello! I'm here to help answer questions based on uploaded documents.";
   }
 
   /**
@@ -402,53 +381,37 @@ Your focused response:`;
       };
     }
 
-    try {
-      // Test with a simple generation
-      const result = await this.model.generateContent('Hello, please respond with "Connection successful"');
-      const response = await result.response;
-      const text = response.text();
-      
-      return {
-        success: true,
-        message: `Gemini AI connected successfully with gemini-3.5-flash. Response: ${text.substring(0, 100)}...`
-      };
-    } catch (error: any) {
-      // If gemini-3.5-flash fails, try with gemini-1.5-flash
-      if (error.status === 404) {
-        try {
-          console.log('Trying alternative model: gemini-1.5-flash');
-          this.model = this.genAI!.getGenerativeModel({ model: 'gemini-1.5-flash' });
-          const result = await this.model.generateContent('Hello, please respond with "Connection successful"');
-          const response = await result.response;
-          const text = response.text();
-          
+    const modelsToTry = ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+    
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`Testing connection with model: ${modelName}`);
+        this.model = this.genAI!.getGenerativeModel({ model: modelName });
+        const result = await this.model.generateContent('Hello, please respond with "Connection successful"');
+        const response = await result.response;
+        const text = response.text();
+        
+        return {
+          success: true,
+          message: `Gemini AI connected successfully with ${modelName}. Response: ${text.substring(0, 100)}...`
+        };
+      } catch (error: any) {
+        console.error(`Model ${modelName} test failed:`, error.message, `(Status: ${error.status || 'N/A'})`);
+        
+        // If it's the last model, return failure
+        if (modelName === modelsToTry[modelsToTry.length - 1]) {
           return {
-            success: true,
-            message: `Gemini AI connected with gemini-1.5-flash. Response: ${text.substring(0, 100)}...`
+            success: false,
+            message: `All Gemini models failed. Last error: ${error.message || 'Unknown error'}. Status: ${error.status || 'N/A'}`
           };
-        } catch (fallbackError: any) {
-          // Try gemini-pro as final fallback
-          try {
-            console.log('Trying final fallback model: gemini-pro');
-            this.model = this.genAI!.getGenerativeModel({ model: 'gemini-pro' });
-            const result = await this.model.generateContent('Hello, please respond with "Connection successful"');
-            const response = await result.response;
-            const text = response.text();
-            
-            return {
-              success: true,
-              message: `Gemini AI connected with gemini-pro. Response: ${text.substring(0, 100)}...`
-            };
-          } catch (finalError) {
-            console.error('All fallback models failed:', finalError);
-          }
         }
+        // Otherwise, continue to next model
       }
-
-      return {
-        success: false,
-        message: `Gemini connection failed: ${error.message || 'Unknown error'}. Status: ${error.status || 'N/A'}`
-      };
     }
+
+    return {
+      success: false,
+      message: 'Failed to connect to any Gemini model'
+    };
   }
 }

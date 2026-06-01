@@ -21,23 +21,41 @@ export const askQuestion: RequestHandler = catchAsync(async (req: ChatRequest, r
     return next(new AppError('Question is too long. Maximum 500 characters allowed.', 400));
   }
 
-  // Get answer from the question answering service (now AI-enhanced)
-  const result = await QuestionAnsweringService.answerQuestion(question.trim());
+  // Setup streaming response
+  res.setHeader('Content-Type', 'application/x-ndjson');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
 
-  res.status(200).json({
-    status: 'success',
-    data: {
-      question: question.trim(),
-      answer: result.answer,
-      confidence: result.confidence,
-      type: result.type,
-      sources: result.sources,
-      aiGenerated: result.aiGenerated || false,
-      aiAvailable: GeminiService.isAvailable(),
-      suggestedQuestions: result.suggestedQuestions || [],
-      timestamp: new Date().toISOString()
-    }
-  });
+  const onToken = (token: string) => {
+    res.write(JSON.stringify({ token }) + '\n');
+  };
+
+  try {
+    const meta = await QuestionAnsweringService.answerQuestionStream(question.trim(), onToken);
+
+    // Stream the final metadata chunk
+    const finalMetadata = {
+      type: 'metadata',
+      data: {
+        question: question.trim(),
+        confidence: meta.confidence,
+        answerType: meta.type,
+        sources: meta.sources,
+        aiGenerated: meta.aiGenerated || false,
+        aiAvailable: GeminiService.isAvailable(),
+        suggestedQuestions: meta.suggestedQuestions || [],
+        timestamp: new Date().toISOString()
+      }
+    };
+    
+    res.write(JSON.stringify(finalMetadata) + '\n');
+    res.end();
+  } catch (error) {
+    console.error('Error during streaming:', error);
+    res.write(JSON.stringify({ error: 'An error occurred while generating the answer.' }) + '\n');
+    res.end();
+  }
 });
 
 export const getSimilarQuestions: RequestHandler = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
