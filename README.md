@@ -74,8 +74,10 @@ src/
 - `POST /api/qa` - Create Q&A pair (requires admin token)
 - `DELETE /api/qa/:id` - Delete Q&A pair (requires admin token)
 
-### Health Check
-- `GET /health` - Server health status
+### Chat & Question Answering (Public)
+- `POST /api/chat/ask` - Ask a question to the chatbot
+- `GET /api/chat/similar` - Get similar questions from Q&A pairs
+- `GET /api/chat/stats` - Get knowledge base statistics
 
 ## Document Upload
 

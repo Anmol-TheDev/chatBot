@@ -1,8 +1,8 @@
-import { Router } from 'express';
+import { Router, type IRouter } from 'express';
 import { createQA, getAllQA, getQAById, updateQA, deleteQA, searchQA, getQAStats } from '../controllers/qaController.js';
 import { authenticate } from '../middleware/auth.js';
 
-const router = Router();
+const router: IRouter = Router();
 
 // Protected routes - only admin can manage Q&A
 router.post('/', authenticate, createQA);

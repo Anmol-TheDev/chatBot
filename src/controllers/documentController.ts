@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { catchAsync } from '../utils/catchAsync.js';
 import AppError from '../utils/AppError.js';
 import DocumentModel from '../models/Document.js';
+import TextChunkModel from '../models/TextChunk.js';
 import { TextExtractionService } from '../services/textExtraction.js';
 import { CloudinaryService } from '../services/cloudinaryService.js';
 
@@ -24,9 +25,9 @@ export const uploadDocument: RequestHandler = catchAsync(async (req: UploadReque
     // Get file type
     const fileType = TextExtractionService.getFileType(file.originalname);
     
-    // Extract text from the uploaded file using Cloudinary URL
-    const extractedText = await TextExtractionService.extractText(
-      file.path, // This is now the Cloudinary URL
+    // Extract text and create chunks
+    const extractionResult = await TextExtractionService.extractTextAndChunk(
+      file.path, // Cloudinary URL
       fileType,
       file.originalname
     );
@@ -37,24 +38,48 @@ export const uploadDocument: RequestHandler = catchAsync(async (req: UploadReque
       fileType: fileType,
       filePath: file.path, // Cloudinary URL
       cloudinaryId: file.filename, // Cloudinary public_id
-      extractedText: extractedText
+      extractedText: extractionResult.fullText
     });
+
+    // Save text chunks to database
+    const chunkPromises = extractionResult.chunks.map((chunk, index) => 
+      TextChunkModel.create({
+        documentId: document._id,
+        chunkIndex: index,
+        content: chunk.content,
+        wordCount: chunk.wordCount,
+        metadata: {
+          startPosition: chunk.startPosition,
+          endPosition: chunk.endPosition,
+          pageNumber: chunk.pageNumber
+        }
+      })
+    );
+
+    const savedChunks = await Promise.all(chunkPromises);
 
     res.status(201).json({
       status: 'success',
-      message: 'Document uploaded successfully',
+      message: 'Document uploaded and processed successfully',
       data: {
         document: {
           id: document._id,
           fileName: document.fileName,
           fileType: document.fileType,
-          filePath: document.filePath, // Cloudinary URL
-          extractedText: document.extractedText.substring(0, 200) + (document.extractedText.length > 200 ? '...' : ''), // Preview only
-          uploadedAt: document.uploadedAt
+          filePath: document.filePath,
+          extractedText: document.extractedText.substring(0, 200) + (document.extractedText.length > 200 ? '...' : ''),
+          uploadedAt: document.uploadedAt,
+          chunksCreated: savedChunks.length,
+          totalWords: extractionResult.metadata.wordCount,
+          processingTime: extractionResult.metadata.processingTime,
+          extractionMethod: extractionResult.metadata.extractionMethod,
+          metadata: extractionResult.metadata
         }
       }
     });
   } catch (error) {
+    console.error('Document processing error:', error);
+    
     // If database save fails, clean up the uploaded file from Cloudinary
     try {
       await CloudinaryService.deleteFile(file.filename);
@@ -71,11 +96,22 @@ export const getDocuments: RequestHandler = catchAsync(async (req: Request, res:
     .select('-extractedText') // Exclude full text for list view
     .sort({ uploadedAt: -1 });
 
+  // Get chunk counts for each document
+  const documentsWithStats = await Promise.all(
+    documents.map(async (doc) => {
+      const chunkCount = await TextChunkModel.countDocuments({ documentId: doc._id });
+      return {
+        ...doc.toObject(),
+        chunkCount
+      };
+    })
+  );
+
   res.status(200).json({
     status: 'success',
     results: documents.length,
     data: {
-      documents
+      documents: documentsWithStats
     }
   });
 });
@@ -89,10 +125,18 @@ export const getDocument: RequestHandler = catchAsync(async (req: Request, res: 
     return next(new AppError('Document not found', 404));
   }
 
+  // Get associated chunks
+  const chunks = await TextChunkModel.find({ documentId: id })
+    .sort({ chunkIndex: 1 })
+    .select('chunkIndex content wordCount metadata');
+
   res.status(200).json({
     status: 'success',
     data: {
-      document
+      document: {
+        ...document.toObject(),
+        chunks
+      }
     }
   });
 });
@@ -105,6 +149,9 @@ export const deleteDocument: RequestHandler = catchAsync(async (req: Request, re
   if (!document) {
     return next(new AppError('Document not found', 404));
   }
+
+  // Delete associated text chunks
+  await TextChunkModel.deleteMany({ documentId: id });
 
   // Delete the file from Cloudinary
   try {

@@ -10,6 +10,7 @@ import AppError from './utils/AppError.js';
 import adminRoutes from './routes/adminRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';
 import qaRoutes from './routes/qaRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +30,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/admin', adminRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/qa', qaRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Health check route
 app.get('/health', (req: Request, res: Response) => {

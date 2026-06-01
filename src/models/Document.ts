@@ -20,8 +20,8 @@ const documentSchema = new Schema<IDocument>({
     type: String,
     required: [true, 'File type is required'],
     enum: {
-      values: ['pdf', 'doc', 'docx', 'txt', 'md'],
-      message: 'File type must be one of: pdf, doc, docx, txt, md'
+      values: ['pdf', 'doc', 'docx', 'txt', 'md', 'xls', 'xlsx'],
+      message: 'File type must be one of: pdf, doc, docx, txt, md, xls, xlsx'
     }
   },
   filePath: {

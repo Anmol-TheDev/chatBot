@@ -3,6 +3,11 @@ import multer from 'multer';
 import AppError from '../utils/AppError.js';
 
 export const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
+  // Handle Cloudinary configuration errors
+  if (typeof err === 'string' && err.includes('api_key')) {
+    return next(new AppError('File upload service is not properly configured. Please contact administrator.', 500));
+  }
+
   if (err instanceof multer.MulterError) {
     let message = 'File upload error';
     let statusCode = 400;
@@ -34,6 +39,11 @@ export const handleMulterError = (err: any, req: Request, res: Response, next: N
     }
 
     return next(new AppError(message, statusCode));
+  }
+
+  // Handle other Cloudinary errors
+  if (err.message && err.message.includes('cloudinary')) {
+    return next(new AppError('File upload service error. Please try again later.', 500));
   }
 
   // If it's not a multer error, pass it to the next error handler

@@ -1,0 +1,50 @@
+meta {
+  name: Get Knowledge Base Stats
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{baseUrl}}/api/chat/stats
+  body: none
+  auth: none
+}
+
+tests {
+  test("should return knowledge base statistics", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("success");
+    expect(res.getBody().data.knowledgeBase).to.have.property("totalDocuments");
+    expect(res.getBody().data.knowledgeBase).to.have.property("totalChunks");
+    expect(res.getBody().data.knowledgeBase).to.have.property("totalQAPairs");
+  });
+}
+
+docs {
+  # Get Knowledge Base Statistics
+  
+  Get statistics about the knowledge base including documents, text chunks, and Q&A pairs.
+  
+  **Authentication:** None required (public endpoint)
+  
+  ## Success Response (200)
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "knowledgeBase": {
+        "totalDocuments": 5,
+        "totalChunks": 127,
+        "totalQAPairs": 15,
+        "avgChunksPerDocument": 25
+      }
+    }
+  }
+  ```
+  
+  ## Statistics Explained
+  - `totalDocuments`: Number of uploaded documents
+  - `totalChunks`: Number of text chunks created from documents
+  - `totalQAPairs`: Number of custom Q&A pairs
+  - `avgChunksPerDocument`: Average chunks per document
+}

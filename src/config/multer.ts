@@ -8,9 +8,9 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'chatbot-documents', // Folder name in Cloudinary
-    allowed_formats: ['pdf', 'doc', 'docx', 'txt', 'md'], // Allowed file formats
+    allowed_formats: ['pdf', 'doc', 'docx', 'txt', 'md', 'xls', 'xlsx'], // Allowed file formats
     resource_type: 'raw', // Use 'raw' for non-image files
-    public_id: (req: any, file: Express.Multer.File) => {
+    public_id: (_req: any, file: Express.Multer.File) => {
       // Generate unique filename
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       const fileName = file.fieldname + '-' + uniqueSuffix;
@@ -20,9 +20,9 @@ const storage = new CloudinaryStorage({
 });
 
 // File filter function
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   // Allowed file types
-  const allowedTypes = ['.pdf', '.doc', '.docx', '.txt', '.md'];
+  const allowedTypes = ['.pdf', '.doc', '.docx', '.txt', '.md', '.xls', '.xlsx'];
   const fileExtension = file.originalname.toLowerCase().split('.').pop();
   
   if (fileExtension && allowedTypes.includes('.' + fileExtension)) {

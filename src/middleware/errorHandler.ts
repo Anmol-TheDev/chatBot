@@ -7,11 +7,19 @@ interface CustomError extends Error {
 }
 
 const globalErrorHandler = (
-  err: CustomError,
+  err: CustomError | string,
   req: Request,
   res: Response,
   next: NextFunction
 ): void => {
+  // Handle string errors (like Cloudinary errors)
+  if (typeof err === 'string') {
+    const error = new Error(err) as CustomError;
+    error.statusCode = 500;
+    error.status = 'error';
+    err = error;
+  }
+
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 
