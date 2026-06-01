@@ -25,9 +25,12 @@ tests {
   test("should create QA successfully", function() {
     expect(res.getStatus()).to.equal(201);
     expect(res.getBody().status).to.equal("success");
-    expect(res.getBody().data).to.have.property("id");
-    expect(res.getBody().data).to.have.property("question");
-    expect(res.getBody().data).to.have.property("answer");
+    expect(res.getBody().data.qa).to.have.property("_id");
+    expect(res.getBody().data.qa).to.have.property("question");
+    expect(res.getBody().data.qa).to.have.property("answer");
+    
+    // Store QA ID for other requests
+    bru.setEnvVar("qaId", res.getBody().data.qa._id);
   });
 }
 
@@ -50,21 +53,34 @@ docs {
   ```json
   {
     "status": "success",
-    "message": "QA created successfully",
+    "message": "Q&A created successfully",
     "data": {
-      "id": "qa_1704067200000",
-      "question": "What is the purpose of this chatbot?",
-      "answer": "This chatbot is designed to help users with document-based question answering.",
-      "createdAt": "2024-01-01T00:00:00.000Z"
+      "qa": {
+        "_id": "64f8a1b2c3d4e5f6a7b8c9d0",
+        "question": "What is the purpose of this chatbot?",
+        "answer": "This chatbot is designed to help users with document-based question answering.",
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z"
+      }
     }
   }
   ```
   
-  ## Error Response (400)
+  ## Error Responses
+  
+  ### Missing Fields (400)
   ```json
   {
     "status": "fail",
     "message": "Question and answer are required"
+  }
+  ```
+  
+  ### Duplicate Question (400)
+  ```json
+  {
+    "status": "fail",
+    "message": "A Q&A with this question already exists"
   }
   ```
 }

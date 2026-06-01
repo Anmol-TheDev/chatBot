@@ -1,11 +1,11 @@
 meta {
   name: Delete QA
   type: http
-  seq: 8
+  seq: 11
 }
 
 delete {
-  url: {{baseUrl}}/api/qa/qa_1704067200000
+  url: {{baseUrl}}/api/qa/{{qaId}}
   body: none
   auth: bearer
 }
@@ -16,9 +16,7 @@ auth:bearer {
 
 tests {
   test("should delete QA successfully", function() {
-    expect(res.getStatus()).to.equal(200);
-    expect(res.getBody().status).to.equal("success");
-    expect(res.getBody().data).to.equal(null);
+    expect(res.getStatus()).to.equal(204);
   });
 }
 
@@ -30,22 +28,16 @@ docs {
   **Authentication Required:** Admin JWT token
   
   ## URL Parameters
-  - `id` (string): ID of the Q&A pair to delete
+  - `id` (string): MongoDB ObjectId of the Q&A pair to delete
   
-  ## Success Response (200)
-  ```json
-  {
-    "status": "success",
-    "message": "QA with ID qa_1704067200000 deleted successfully",
-    "data": null
-  }
-  ```
+  ## Success Response (204)
+  No content returned on successful deletion.
   
-  ## Error Response (400)
+  ## Error Response (404)
   ```json
   {
     "status": "fail",
-    "message": "QA ID is required"
+    "message": "Q&A not found"
   }
   ```
 }
