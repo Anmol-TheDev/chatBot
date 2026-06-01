@@ -20,6 +20,7 @@ export interface AnswerResult {
   confidence: 'high' | 'medium' | 'low';
   type: 'exact_match' | 'document_based' | 'ai_generated' | 'not_found';
   aiGenerated?: boolean;
+  suggestedQuestions?: string[];
 }
 
 export class QuestionAnsweringService {
@@ -83,24 +84,31 @@ export class QuestionAnsweringService {
       if (GeminiService.isAvailable()) {
         try {
           const simpleResponse = await GeminiService.generateSimpleResponse(question);
+          const suggestedQuestions = await this.getSampleQuestions(5);
+          
           return {
             answer: simpleResponse,
             sources: [],
             confidence: 'low',
             type: 'ai_generated',
-            aiGenerated: true
+            aiGenerated: true,
+            suggestedQuestions: suggestedQuestions
           };
         } catch (error) {
           console.error('Simple AI response failed:', error);
         }
       }
 
+      // Get suggested questions for fallback
+      const suggestedQuestions = await this.getSampleQuestions(5);
+
       return {
         answer: "I couldn't find relevant information to answer your question. Please try rephrasing your question or check if the relevant documents have been uploaded.",
         sources: [],
         confidence: 'low',
         type: 'not_found',
-        aiGenerated: false
+        aiGenerated: false,
+        suggestedQuestions: suggestedQuestions
       };
     }
 
@@ -218,8 +226,66 @@ export class QuestionAnsweringService {
   }
 
   /**
-   * Get document statistics for knowledge base
+   * Get sample questions from Q&A pairs and document topics
    */
+  static async getSampleQuestions(limit: number = 5): Promise<string[]> {
+    try {
+      const sampleQuestions: string[] = [];
+
+      // PRIORITY 1: Get actual questions from Q&A database (most important)
+      const qaQuestions = await QAModel.find()
+        .select('question')
+        .limit(limit) // Get up to the full limit from Q&A
+        .sort({ createdAt: -1 });
+
+      // Add all available Q&A questions first
+      qaQuestions.forEach(qa => {
+        sampleQuestions.push(qa.question);
+      });
+
+      // PRIORITY 2: Only if we don't have enough Q&A questions, add document-based questions
+      if (sampleQuestions.length < limit) {
+        const remainingSlots = limit - sampleQuestions.length;
+        const documents = await DocumentModel.find()
+          .select('fileName')
+          .limit(remainingSlots)
+          .sort({ uploadedAt: -1 });
+
+        documents.forEach(doc => {
+          if (sampleQuestions.length < limit) {
+            const fileName = doc.fileName.replace(/\.[^/.]+$/, ""); // Remove extension
+            sampleQuestions.push(`What is ${fileName} about?`);
+          }
+        });
+      }
+
+      // PRIORITY 3: Only if we still don't have enough, add generic questions
+      if (sampleQuestions.length < limit) {
+        const genericQuestions = [
+          "What information do you have available?",
+          "What topics can you help me with?",
+          "What documents have been uploaded?",
+          "Can you summarize the available information?",
+          "What questions can I ask you?"
+        ];
+
+        genericQuestions.forEach(q => {
+          if (sampleQuestions.length < limit && !sampleQuestions.includes(q)) {
+            sampleQuestions.push(q);
+          }
+        });
+      }
+
+      return sampleQuestions.slice(0, limit);
+    } catch (error) {
+      console.error('Error getting sample questions:', error);
+      return [
+        "What information do you have available?",
+        "What topics can you help me with?",
+        "What can I ask you about?"
+      ];
+    }
+  }
   static async getKnowledgeBaseStats(): Promise<{
     totalDocuments: number;
     totalChunks: number;

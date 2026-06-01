@@ -34,6 +34,7 @@ export const askQuestion: RequestHandler = catchAsync(async (req: ChatRequest, r
       sources: result.sources,
       aiGenerated: result.aiGenerated || false,
       aiAvailable: GeminiService.isAvailable(),
+      suggestedQuestions: result.suggestedQuestions || [],
       timestamp: new Date().toISOString()
     }
   });
