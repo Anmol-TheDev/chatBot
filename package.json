@@ -4,8 +4,8 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec \"node --loader ts-node/esm index.ts\"",
-    "start": "node --loader ts-node/esm index.ts",
+    "dev": "nodemon --exec \"node --loader ts-node/esm src/index.ts\"",
+    "start": "node --loader ts-node/esm src/index.ts",
     "build": "tsc"
   },
   "keywords": [],
