@@ -1,9 +1,9 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { createParticleCanvas } from 'package-particlefx';
 
 function Background() {
   const containerRef = useRef(null);
-  const particleCanvasRef = useRef(null);
+  const particleCanvasRef = useRef<any>(null);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -23,7 +23,9 @@ function Background() {
   }, []);
 
   return (
-    <div ref={containerRef} className='fixed top-0 left-0 w-full h-dvh z-[-1] '
+    <div 
+      ref={containerRef} 
+      className='fixed top-0 left-0 w-full h-dvh'
     />
   );
 }
