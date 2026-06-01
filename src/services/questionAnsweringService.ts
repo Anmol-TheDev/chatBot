@@ -1,6 +1,7 @@
 import TextChunkModel from '../models/TextChunk.js';
 import QAModel from '../models/QA.js';
 import DocumentModel from '../models/Document.js';
+import { GeminiService } from './geminiService.js';
 
 export interface SearchResult {
   chunk: {
@@ -15,14 +16,15 @@ export interface SearchResult {
 
 export interface AnswerResult {
   answer: string;
-  sources: SearchResult[];
+  sources: SearchResult[] | string[];
   confidence: 'high' | 'medium' | 'low';
-  type: 'exact_match' | 'document_based' | 'not_found';
+  type: 'exact_match' | 'document_based' | 'ai_generated' | 'not_found';
+  aiGenerated?: boolean;
 }
 
 export class QuestionAnsweringService {
   /**
-   * Answer a question using the knowledge base
+   * Answer a question using the knowledge base with AI enhancement
    */
   static async answerQuestion(question: string): Promise<AnswerResult> {
     // First, try to find an exact match in Q&A pairs
@@ -32,30 +34,85 @@ export class QuestionAnsweringService {
         answer: exactMatch.answer,
         sources: [],
         confidence: 'high',
-        type: 'exact_match'
+        type: 'exact_match',
+        aiGenerated: false
       };
     }
 
-    // If no exact match, search in document chunks
-    const relevantChunks = await this.searchRelevantChunks(question);
-    
+    // Search for relevant chunks and similar Q&A pairs
+    const [relevantChunks, similarQAs] = await Promise.all([
+      this.searchRelevantChunks(question),
+      this.getSimilarQuestions(question, 3)
+    ]);
+
+    // If we have context and Gemini is available, use AI to generate answer
+    if (GeminiService.isAvailable() && (relevantChunks.length > 0 || similarQAs.length > 0)) {
+      try {
+        // Prepare context for Gemini
+        const documentChunks = relevantChunks.map(result => ({
+          content: result.chunk.content,
+          documentName: result.chunk.documentName,
+          relevanceScore: result.chunk.relevanceScore
+        }));
+
+        const qaPairs = similarQAs.map(qa => ({
+          question: qa.question,
+          answer: qa.answer,
+          similarity: qa.similarity
+        }));
+
+        // Generate AI response
+        const aiResponse = await GeminiService.generateAnswer(question, documentChunks, qaPairs);
+
+        return {
+          answer: aiResponse.answer,
+          sources: aiResponse.sources,
+          confidence: aiResponse.confidence,
+          type: 'ai_generated',
+          aiGenerated: true
+        };
+      } catch (error) {
+        console.error('AI generation failed, falling back to traditional method:', error);
+        // Fall back to traditional method if AI fails
+      }
+    }
+
+    // Traditional fallback method
     if (relevantChunks.length === 0) {
+      // If Gemini is available but no context, try simple AI response
+      if (GeminiService.isAvailable()) {
+        try {
+          const simpleResponse = await GeminiService.generateSimpleResponse(question);
+          return {
+            answer: simpleResponse,
+            sources: [],
+            confidence: 'low',
+            type: 'ai_generated',
+            aiGenerated: true
+          };
+        } catch (error) {
+          console.error('Simple AI response failed:', error);
+        }
+      }
+
       return {
         answer: "I couldn't find relevant information to answer your question. Please try rephrasing your question or check if the relevant documents have been uploaded.",
         sources: [],
         confidence: 'low',
-        type: 'not_found'
+        type: 'not_found',
+        aiGenerated: false
       };
     }
 
-    // Generate answer based on relevant chunks
+    // Generate answer based on relevant chunks (traditional method)
     const answer = this.generateAnswerFromChunks(question, relevantChunks);
     
     return {
       answer,
       sources: relevantChunks,
       confidence: relevantChunks.length > 2 ? 'high' : 'medium',
-      type: 'document_based'
+      type: 'document_based',
+      aiGenerated: false
     };
   }
 

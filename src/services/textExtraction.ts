@@ -30,7 +30,7 @@ export class TextExtractionService {
   /**
    * Extract text from uploaded file and create chunks
    */
-  static async extractTextAndChunk(fileUrl: string, _fileType: string, originalName: string): Promise<ExtractionResult> {
+  static async extractTextAndChunk(fileUrl: string, fileType: string, originalName: string): Promise<ExtractionResult> {
     const startTime = Date.now();
     
     try {

@@ -28,6 +28,9 @@ export interface EnvConfig {
   CLOUDINARY_CLOUD_NAME: string;
   CLOUDINARY_API_KEY: string;
   CLOUDINARY_API_SECRET: string;
+
+  // Gemini AI Configuration
+  GEMINI_API_KEY: string;
 }
 
 // Validate and parse environment variables
@@ -92,6 +95,9 @@ const validateEnv = (): EnvConfig => {
     CLOUDINARY_CLOUD_NAME: getOptionalEnv('CLOUDINARY_CLOUD_NAME', ''),
     CLOUDINARY_API_KEY: getOptionalEnv('CLOUDINARY_API_KEY', ''),
     CLOUDINARY_API_SECRET: getOptionalEnv('CLOUDINARY_API_SECRET', ''),
+
+    // Gemini AI Configuration
+    GEMINI_API_KEY: getOptionalEnv('GEMINI_API_KEY', ''),
   };
 
   // Check for validation errors
@@ -111,6 +117,16 @@ const validateEnv = (): EnvConfig => {
     console.warn('  - File upload features will be disabled until Cloudinary is configured.');
   } else {
     console.log('✅ Cloudinary configuration validated');
+  }
+
+  // Validate Gemini configuration separately (non-fatal)
+  const geminiMissing = !config.GEMINI_API_KEY;
+  if (geminiMissing) {
+    console.warn('⚠️  Gemini AI configuration incomplete:');
+    console.warn('  - GEMINI_API_KEY:', config.GEMINI_API_KEY ? '✅' : '❌ Missing');
+    console.warn('  - AI-powered question answering will be disabled until Gemini is configured.');
+  } else {
+    console.log('✅ Gemini AI configuration validated');
   }
 
   console.log('✅ Environment configuration loaded successfully');
@@ -151,4 +167,8 @@ export const cloudinaryConfig = {
   CLOUDINARY_CLOUD_NAME: env.CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY: env.CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET: env.CLOUDINARY_API_SECRET,
+};
+
+export const geminiConfig = {
+  GEMINI_API_KEY: env.GEMINI_API_KEY,
 };

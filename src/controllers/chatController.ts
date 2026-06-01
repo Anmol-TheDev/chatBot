@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { catchAsync } from '../utils/catchAsync.js';
 import AppError from '../utils/AppError.js';
 import { QuestionAnsweringService } from '../services/questionAnsweringService.js';
+import { GeminiService } from '../services/geminiService.js';
 
 interface ChatRequest extends Request {
   body: {
@@ -20,7 +21,7 @@ export const askQuestion: RequestHandler = catchAsync(async (req: ChatRequest, r
     return next(new AppError('Question is too long. Maximum 500 characters allowed.', 400));
   }
 
-  // Get answer from the question answering service
+  // Get answer from the question answering service (now AI-enhanced)
   const result = await QuestionAnsweringService.answerQuestion(question.trim());
 
   res.status(200).json({
@@ -31,6 +32,8 @@ export const askQuestion: RequestHandler = catchAsync(async (req: ChatRequest, r
       confidence: result.confidence,
       type: result.type,
       sources: result.sources,
+      aiGenerated: result.aiGenerated || false,
+      aiAvailable: GeminiService.isAvailable(),
       timestamp: new Date().toISOString()
     }
   });
@@ -62,6 +65,18 @@ export const getKnowledgeBaseStats: RequestHandler = catchAsync(async (req: Requ
     status: 'success',
     data: {
       knowledgeBase: stats
+    }
+  });
+});
+export const testAI: RequestHandler = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const testResult = await GeminiService.testConnection();
+
+  res.status(testResult.success ? 200 : 503).json({
+    status: testResult.success ? 'success' : 'error',
+    data: {
+      aiAvailable: testResult.success,
+      message: testResult.message,
+      timestamp: new Date().toISOString()
     }
   });
 });

@@ -6,6 +6,7 @@ import { handleMulterError } from './middleware/multerErrorHandler.js';
 import AppError from './utils/AppError.js';
 import { corsConfig } from './config/env.js';
 import { isCloudinaryConfigured } from './config/cloudinary.js';
+import { GeminiService } from './services/geminiService.js';
 
 // Import routes
 import adminRoutes from './routes/adminRoutes.js';
@@ -40,7 +41,8 @@ app.get('/health', (req: Request, res: Response) => {
     message: 'Server is running successfully',
     timestamp: new Date().toISOString(),
     services: {
-      cloudinary: isCloudinaryConfigured() ? 'configured' : 'not configured'
+      cloudinary: isCloudinaryConfigured() ? 'configured' : 'not configured',
+      geminiAI: GeminiService.isAvailable() ? 'configured' : 'not configured'
     }
   });
 });
