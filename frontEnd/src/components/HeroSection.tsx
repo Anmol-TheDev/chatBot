@@ -4,7 +4,7 @@ import { Shield, Clock, Database } from 'lucide-react';
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center px-6 pt-24 pb-12">
+    <section className="relative min-h-screen flex items-center justify-center px-6 pt-24 pb-12 overflow-hidden">
       {/* Decorative Elements */}
       <div className="absolute left-0 top-1/4 w-32 h-96 opacity-[0.03] pointer-events-none hidden lg:block">
         <svg viewBox="0 0 100 300" fill="currentColor" className="text-foreground">
@@ -67,7 +67,7 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="text-lg md:text-xl text-muted-foreground max-w-[600px] mx-auto lg:mx-0"
+              className="text-lg md:text-xl text-muted-foreground max-w-[600px] mx-auto lg:mx-0 bg-background/30 rounded-sm px-2"
             >
               Powered by your company's knowledge base, documents, and workflows. 
               Deliver instant answers with a premium AI support experience.
