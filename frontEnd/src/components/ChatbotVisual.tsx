@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { useChat } from '@/hooks/useChat';
+import ThinkingLoader from "@/components/content/thinking-loader";
 
 export function ChatbotVisual() {
   const { messages, isLoading, handleAsk } = useChat();
@@ -20,7 +21,6 @@ export function ChatbotVisual() {
     "Payment methods accepted",
   ];
 
-  // Auto-scroll to bottom when messages change or while streaming
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
@@ -40,7 +40,7 @@ export function ChatbotVisual() {
   return (
     <div className="relative w-full">
       <div className="w-full max-w-[480px] mx-auto">
-        <Card className="backdrop-blur-2xl bg-card/90 border-border/50 shadow-2xl w-full overflow-hidden flex flex-col h-[500px] sm:h-[600px]">
+        <Card className="backdrop-blur-2xl bg-card/90 border-border/50 shadow-2xl w-full sm:w-2xl overflow-hidden flex flex-col h-[500px] sm:h-[600px]">
           {/* Header */}
           <CardHeader className="p-4 border-b border-border/50 flex flex-row items-center justify-between space-y-0">
             <div className="flex items-center gap-3">
@@ -87,15 +87,14 @@ export function ChatbotVisual() {
                             </p>
                           </div>
 
-                          {/* Render Suggested Questions ONLY if present */}
                           {msg.suggestedQuestions && msg.suggestedQuestions.length > 0 && (
-                            <div className="flex flex-wrap gap-2 pt-1">
+                            <div className="flex flex-col gap-2 pt-1">
                               {msg.suggestedQuestions.map((sq, idx) => (
                                 <Button
                                   key={idx}
                                   variant="outline"
                                   onClick={() => handleAsk(sq)}
-                                  className="h-auto py-1.5 px-3 rounded-full bg-background hover:bg-accent border-border/50 text-xs font-medium text-muted-foreground hover:text-foreground text-left max-w-full whitespace-normal break-words"
+                                  className="h-auto py-1.5 px-3 rounded-sm bg-background hover:bg-accent border-border text-xs font-medium text-muted-foreground hover:text-foreground text-left max-w-full whitespace-normal break-words"
                                 >
                                   {sq}
                                 </Button>
@@ -113,7 +112,7 @@ export function ChatbotVisual() {
                     )}
                   </div>
                 ))}
-                
+
                 {isLoading && (
                   <div className="flex gap-3">
                     <Avatar className="w-8 h-8 border border-border shrink-0 mt-1">
@@ -121,8 +120,8 @@ export function ChatbotVisual() {
                         <Bot className="w-4 h-4" />
                       </AvatarFallback>
                     </Avatar>
-                    <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3">
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 flex items-center">
+                      <ThinkingLoader phrases={["Thinking..."]} className="text-xs" textClassName="w-28 text-xs" />
                     </div>
                   </div>
                 )}

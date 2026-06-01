@@ -44,11 +44,14 @@ export function useChat() {
         throw new Error("Failed to fetch stream");
       }
 
+      // Artificial delay to let the user enjoy the ThinkingLoader animation
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
       setIsLoading(false); // Stop loading spinner, start streaming
 
       const botMsgId = Date.now().toString();
       // Initialize empty bot message
-      setMessages(prev => [...prev, { id: botMsgId, role: 'bot', content: "", isStreaming: false }]);
+      setMessages(prev => [...prev, { id: botMsgId, role: 'bot', content: "", isStreaming: true }]);
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -62,43 +65,88 @@ export function useChat() {
 
         buffer += decoder.decode(value, { stream: true });
 
-        // A trick to parse concatenated JSON objects like `{"token": "..."}{"type": "metadata"}`
-        // We replace `}{` with `}SPLIT{` to easily separate them, even if no newlines exist.
-        const stringChunks = buffer.replace(/\}\s*\{/g, '}SPLIT{').split('SPLIT');
+        // Robust parsing of concatenated JSON objects using a bracket counter
+        let startIndex = 0;
         
-        // Keep the last chunk in the buffer if it's incomplete
-        buffer = stringChunks.pop() || "";
+        while (startIndex < buffer.length) {
+          // Skip any whitespace between objects
+          while (startIndex < buffer.length && /\s/.test(buffer[startIndex])) {
+            startIndex++;
+          }
+          if (startIndex >= buffer.length) break;
+          if (buffer[startIndex] !== '{') break; // Malformed data? Stop parsing here.
 
-        for (const chunkStr of stringChunks) {
-          try {
-            const parsed = JSON.parse(chunkStr);
-            if (parsed.token) {
-              accumulatedContent += parsed.token;
-              // Update state with new token
-              setMessages(prev => prev.map(msg => 
-                msg.id === botMsgId 
-                  ? { ...msg, content: accumulatedContent }
-                  : msg
-              ));
-            } else if (parsed.type === "metadata" && parsed.data) {
-               if (parsed.data.suggestedQuestions) {
-                  parsedSuggestedQuestions = parsed.data.suggestedQuestions;
-               }
-               // Could also handle answer fallback if token wasn't provided
-               if (!accumulatedContent && parsed.data.answer) {
-                  accumulatedContent = parsed.data.answer;
-               }
-               setMessages(prev => prev.map(msg => 
-                msg.id === botMsgId 
-                  ? { ...msg, content: accumulatedContent, suggestedQuestions: parsedSuggestedQuestions }
-                  : msg
-               ));
+          let openBraces = 0;
+          let inString = false;
+          let escapeNext = false;
+          let endIndex = -1;
+
+          for (let i = startIndex; i < buffer.length; i++) {
+            const char = buffer[i];
+            
+            if (escapeNext) {
+              escapeNext = false;
+              continue;
             }
-          } catch (e) {
-            // Should not happen for complete chunks, but safe fallback
-            console.warn("Failed to parse inner chunk", chunkStr);
+            if (char === '\\') {
+              escapeNext = true;
+              continue;
+            }
+            if (char === '"') {
+              inString = !inString;
+              continue;
+            }
+            
+            if (!inString) {
+              if (char === '{') openBraces++;
+              else if (char === '}') openBraces--;
+              
+              if (openBraces === 0) {
+                endIndex = i;
+                break;
+              }
+            }
+          }
+
+          if (endIndex !== -1) {
+            // Found a complete JSON object
+            const jsonStr = buffer.substring(startIndex, endIndex + 1);
+            startIndex = endIndex + 1; // Advance for the next object
+            
+            try {
+              const parsed = JSON.parse(jsonStr);
+              if (parsed.token) {
+                accumulatedContent += parsed.token;
+                // Update state in real-time as soon as the token is complete
+                setMessages(prev => prev.map(msg => 
+                  msg.id === botMsgId 
+                    ? { ...msg, content: accumulatedContent }
+                    : msg
+                ));
+              } else if (parsed.type === "metadata" && parsed.data) {
+                 if (parsed.data.suggestedQuestions) {
+                    parsedSuggestedQuestions = parsed.data.suggestedQuestions;
+                 }
+                 if (!accumulatedContent && parsed.data.answer) {
+                    accumulatedContent = parsed.data.answer;
+                 }
+                 setMessages(prev => prev.map(msg => 
+                  msg.id === botMsgId 
+                    ? { ...msg, content: accumulatedContent, suggestedQuestions: parsedSuggestedQuestions }
+                    : msg
+                 ));
+              }
+            } catch (e) {
+              console.warn("Failed to parse extracted JSON object:", jsonStr);
+            }
+          } else {
+            // The JSON object is incomplete, wait for more chunks
+            break;
           }
         }
+        
+        // Retain only the incomplete portion of the buffer
+        buffer = buffer.substring(startIndex);
       }
 
       // Try to parse whatever is left in the buffer when stream ends
@@ -118,7 +166,7 @@ export function useChat() {
       // Final update to attach suggested questions if they weren't attached yet
       setMessages(prev => prev.map(msg => 
         msg.id === botMsgId 
-          ? { ...msg, content: accumulatedContent, suggestedQuestions: parsedSuggestedQuestions }
+          ? { ...msg, content: accumulatedContent, suggestedQuestions: parsedSuggestedQuestions, isStreaming: false }
           : msg
       ));
 
