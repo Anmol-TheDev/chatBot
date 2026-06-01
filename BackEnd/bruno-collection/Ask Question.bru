@@ -1,0 +1,87 @@
+meta {
+  name: Ask Question
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api/chat/ask
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "question": "What is the purpose of this chatbot system?"
+  }
+}
+
+tests {
+  test("should return answer to question", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("success");
+    expect(res.getBody().data).to.have.property("question");
+    expect(res.getBody().data).to.have.property("answer");
+    expect(res.getBody().data).to.have.property("confidence");
+    expect(res.getBody().data).to.have.property("type");
+  });
+}
+
+docs {
+  # Ask Question
+  
+  Ask a question to the chatbot and get an answer based on uploaded documents and Q&A pairs.
+  
+  **Authentication:** None required (public endpoint)
+  
+  ## Request Body
+  ```json
+  {
+    "question": "What is the purpose of this chatbot system?"
+  }
+  ```
+  
+  ## Success Response (200)
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "question": "What is the purpose of this chatbot system?",
+      "answer": "This chatbot system is designed to help users with intelligent document-based question answering...",
+      "confidence": "high",
+      "type": "exact_match",
+      "sources": [
+        {
+          "chunk": {
+            "id": "64f8a1b2c3d4e5f6a7b8c9d0",
+            "content": "Relevant text chunk from document...",
+            "documentId": "64f8a1b2c3d4e5f6a7b8c9d1",
+            "documentName": "user-guide.pdf",
+            "chunkIndex": 0,
+            "relevanceScore": 0.95
+          }
+        }
+      ],
+      "timestamp": "2024-01-01T00:00:00.000Z"
+    }
+  }
+  ```
+  
+  ## Answer Types
+  - `exact_match`: Found exact match in Q&A pairs
+  - `document_based`: Generated from document chunks
+  - `not_found`: No relevant information found
+  
+  ## Confidence Levels
+  - `high`: Strong match or multiple relevant sources
+  - `medium`: Moderate relevance
+  - `low`: Limited or no relevant information
+  
+  ## Error Response (400)
+  ```json
+  {
+    "status": "fail",
+    "message": "Question is required"
+  }
+  ```
+}

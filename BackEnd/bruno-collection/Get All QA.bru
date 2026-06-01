@@ -1,0 +1,75 @@
+meta {
+  name: Get All QA
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/qa?page=1&limit=10
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+params:query {
+  page: 1
+  limit: 10
+  ~search: chatbot
+}
+
+tests {
+  test("should return list of QA pairs", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("success");
+    expect(res.getBody().data.qaPairs).to.be.an("array");
+    expect(res.getBody()).to.have.property("pagination");
+  });
+}
+
+docs {
+  # Get All Q&A Pairs
+  
+  Retrieve a paginated list of all Q&A pairs with optional search functionality.
+  
+  **Authentication Required:** Admin JWT token
+  
+  ## Query Parameters
+  - `page` (number, optional): Page number (default: 1)
+  - `limit` (number, optional): Items per page (default: 10)
+  - `search` (string, optional): Search term for questions and answers
+  
+  ## Success Response (200)
+  ```json
+  {
+    "status": "success",
+    "results": 2,
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 2,
+      "pages": 1
+    },
+    "data": {
+      "qaPairs": [
+        {
+          "_id": "64f8a1b2c3d4e5f6a7b8c9d0",
+          "question": "What is the purpose of this chatbot?",
+          "answer": "This chatbot is designed to help users with document-based question answering.",
+          "createdAt": "2024-01-01T00:00:00.000Z",
+          "updatedAt": "2024-01-01T00:00:00.000Z"
+        },
+        {
+          "_id": "64f8a1b2c3d4e5f6a7b8c9d1",
+          "question": "How do I upload documents?",
+          "answer": "You can upload documents using the POST /api/documents/upload endpoint with admin authentication.",
+          "createdAt": "2024-01-01T01:00:00.000Z",
+          "updatedAt": "2024-01-01T01:00:00.000Z"
+        }
+      ]
+    }
+  }
+  ```
+}

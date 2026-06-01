@@ -1,0 +1,43 @@
+meta {
+  name: Delete Document
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/api/documents/64f8a1b2c3d4e5f6a7b8c9d0
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("should delete document successfully", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  # Delete Document
+  
+  Delete a document from both the database and Cloudinary storage.
+  
+  **Authentication Required:** Admin JWT token
+  
+  ## URL Parameters
+  - `id` (string): MongoDB ObjectId of the document to delete
+  
+  ## Success Response (204)
+  No content returned on successful deletion.
+  
+  ## Error Response (404)
+  ```json
+  {
+    "status": "fail",
+    "message": "Document not found"
+  }
+  ```
+}

@@ -1,0 +1,26 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/health
+  body: none
+  auth: none
+}
+
+docs {
+  # Health Check
+  
+  Check if the server is running and healthy.
+  
+  ## Response
+  ```json
+  {
+    "status": "success",
+    "message": "Server is running successfully",
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+  ```
+}

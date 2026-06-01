@@ -1,0 +1,64 @@
+meta {
+  name: Get All Documents
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/documents
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("should return list of documents", function() {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().status).to.equal("success");
+    expect(res.getBody().data.documents).to.be.an("array");
+    expect(res.getBody()).to.have.property("results");
+  });
+}
+
+docs {
+  # Get All Documents
+  
+  Retrieve a list of all uploaded documents (without full extracted text).
+  
+  **Authentication Required:** Admin JWT token
+  
+  ## Success Response (200)
+  ```json
+  {
+    "status": "success",
+    "results": 2,
+    "data": {
+      "documents": [
+        {
+          "_id": "64f8a1b2c3d4e5f6a7b8c9d0",
+          "fileName": "document1.pdf",
+          "fileType": "pdf",
+          "filePath": "https://res.cloudinary.com/your-cloud/raw/upload/v1234567890/chatbot-documents/document-123456789.pdf",
+          "cloudinaryId": "chatbot-documents/document-123456789",
+          "uploadedAt": "2024-01-01T00:00:00.000Z",
+          "createdAt": "2024-01-01T00:00:00.000Z",
+          "updatedAt": "2024-01-01T00:00:00.000Z"
+        },
+        {
+          "_id": "64f8a1b2c3d4e5f6a7b8c9d1",
+          "fileName": "document2.txt",
+          "fileType": "txt",
+          "filePath": "https://res.cloudinary.com/your-cloud/raw/upload/v1234567891/chatbot-documents/document-123456790.txt",
+          "cloudinaryId": "chatbot-documents/document-123456790",
+          "uploadedAt": "2024-01-01T01:00:00.000Z",
+          "createdAt": "2024-01-01T01:00:00.000Z",
+          "updatedAt": "2024-01-01T01:00:00.000Z"
+        }
+      ]
+    }
+  }
+  ```
+}
