@@ -1,11 +1,10 @@
 import { Server } from 'http';
 import app from './app.js';
+import { serverConfig } from './config/env.js';
 
-const PORT: number = parseInt(process.env.PORT || '3000', 10);
-
-const server: Server = app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+const server: Server = app.listen(serverConfig.PORT, () => {
+  console.log(`🚀 Server is running on port ${serverConfig.PORT}`);
+  console.log(`📍 Environment: ${serverConfig.NODE_ENV}`);
 });
 
 // Handle unhandled promise rejections

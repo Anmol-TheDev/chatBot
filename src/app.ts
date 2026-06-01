@@ -1,19 +1,17 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import connectDB from './config/database.js';
 import globalErrorHandler from './middleware/errorHandler.js';
 import { handleMulterError } from './middleware/multerErrorHandler.js';
 import AppError from './utils/AppError.js';
+import { corsConfig } from './config/env.js';
+import { isCloudinaryConfigured } from './config/cloudinary.js';
 
 // Import routes
 import adminRoutes from './routes/adminRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';
 import qaRoutes from './routes/qaRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
-
-// Load environment variables
-dotenv.config();
 
 // Create Express app
 const app: Application = express();
@@ -22,7 +20,10 @@ const app: Application = express();
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: corsConfig.CORS_ORIGIN,
+  credentials: true
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -37,7 +38,10 @@ app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'success',
     message: 'Server is running successfully',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    services: {
+      cloudinary: isCloudinaryConfigured() ? 'configured' : 'not configured'
+    }
   });
 });
 
