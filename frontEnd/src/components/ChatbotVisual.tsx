@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MoreVertical, Clock, Bot, Package, ArrowLeftRight, CreditCard, HelpCircle, Loader2 } from 'lucide-react';
+import { MoreVertical, Clock, Bot, } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -58,9 +58,6 @@ export function ChatbotVisual() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-muted text-muted-foreground">
-                <Clock className="w-4 h-4" />
-              </Button>
               <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg hover:bg-muted text-muted-foreground">
                 <MoreVertical className="w-4 h-4" />
               </Button>

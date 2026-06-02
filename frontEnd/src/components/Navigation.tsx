@@ -35,40 +35,13 @@ export function Navigation() {
           </div>
         </div>
 
-        {/* Navigation Links */}
-        <div className="hidden md:flex items-center gap-8">
-          <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Features
-          </a>
-          <a href="#solutions" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Solutions
-          </a>
-          <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Pricing
-          </a>
-          <a href="#contact" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Contact
-          </a>
-        </div>
-
         {/* Theme Toggle and CTA */}
         <div className="flex items-center gap-4">
-          <button
-            onClick={toggleTheme}
-            className="w-9 h-9 rounded-lg bg-muted hover:bg-accent transition-colors flex items-center justify-center"
-            aria-label="Toggle theme"
-          >
-            {isDark ? (
-              <Sun className="w-4 h-4 text-foreground" />
-            ) : (
-              <Moon className="w-4 h-4 text-foreground" />
-            )}
-          </button>
           <button
             onClick={handleGetStarted}
             className="px-5 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity"
           >
-            Get Started
+            Admin
           </button>
         </div>
       </div>
