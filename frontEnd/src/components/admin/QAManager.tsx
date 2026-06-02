@@ -120,7 +120,7 @@ export function QAManager() {
     if (!deleteDialog.qa) return;
 
     try {
-      await apiClient.delete(`/api/qa/${deleteDialog.qa._id}`);
+      await apiClient.delete(`/qa/${deleteDialog.qa._id}`);
       setSuccess('Q&A pair deleted successfully!');
       fetchQAPairs();
       setTimeout(() => setSuccess(''), 3000);

@@ -32,7 +32,7 @@ export function useChat() {
 
     try {
       // Use standard fetch to read the stream instead of axios, which fails on concatenated JSON
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const response = await fetch(`${baseUrl}/chat/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

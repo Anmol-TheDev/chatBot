@@ -34,7 +34,7 @@ export function DocumentManager() {
     setLoading(true);
     setError('');
     try {
-      const response = await apiClient.get('/api/documents');
+      const response = await apiClient.get('/documents');
       if (response.data.status === 'success') {
         setDocuments(response.data.data.documents);
       }
@@ -98,7 +98,7 @@ export function DocumentManager() {
     if (!deleteDialog.document) return;
 
     try {
-      await apiClient.delete(`/api/documents/${deleteDialog.document._id}`);
+      await apiClient.delete(`/documents/${deleteDialog.document._id}`);
       setSuccess('Document deleted successfully!');
       fetchDocuments();
       setTimeout(() => setSuccess(''), 3000);
