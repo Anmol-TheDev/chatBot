@@ -1,17 +1,19 @@
-import { Moon, Sun } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 
 export function Navigation() {
-  const [isDark, setIsDark] = useState(false);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const isDarkMode = document.documentElement.classList.contains('dark');
-    setIsDark(isDarkMode);
-  }, []);
-
-  const toggleTheme = () => {
-    document.documentElement.classList.toggle('dark');
-    setIsDark(!isDark);
+  const handleGetStarted = () => {
+    // Check if admin is logged in
+    const adminToken = localStorage.getItem('adminToken');
+    
+    if (adminToken) {
+      // If logged in, navigate to dashboard
+      navigate('/admin/dashboard');
+    } else {
+      // If not logged in, navigate to login page
+      navigate('/admin/login');
+    }
   };
 
   return (
@@ -62,7 +64,10 @@ export function Navigation() {
               <Moon className="w-4 h-4 text-foreground" />
             )}
           </button>
-          <button className="px-5 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity">
+          <button
+            onClick={handleGetStarted}
+            className="px-5 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity"
+          >
             Get Started
           </button>
         </div>
