@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, MessageSquare, Loader2, AlertCircle, X } from 'lucide-react';
-import apiClient from '../../lib/axios';
+import { Plus, Edit2, Trash2, MessageSquare, Loader2, AlertCircle, X, CheckCircle } from 'lucide-react';
+import apiClient from '@/lib/axios';
+import { AlertDialog } from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface QAPair {
   _id: string;
@@ -33,6 +35,10 @@ export function QAManager() {
   const [editingQA, setEditingQA] = useState<QAPair | null>(null);
   const [formData, setFormData] = useState({ question: '', answer: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; qa: QAPair | null }>({
+    open: false,
+    qa: null,
+  });
 
   useEffect(() => {
     fetchQAPairs();
@@ -106,13 +112,15 @@ export function QAManager() {
     }
   };
 
-  const handleDelete = async (id: string, question: string) => {
-    if (!confirm(`Are you sure you want to delete this Q&A pair?\n\n"${question}"`)) {
-      return;
-    }
+  const handleDelete = async (qa: QAPair) => {
+    setDeleteDialog({ open: true, qa });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteDialog.qa) return;
 
     try {
-      await apiClient.delete(`/qa/${id}`);
+      await apiClient.delete(`/api/qa/${deleteDialog.qa._id}`);
       setSuccess('Q&A pair deleted successfully!');
       fetchQAPairs();
       setTimeout(() => setSuccess(''), 3000);
@@ -148,16 +156,17 @@ export function QAManager() {
 
       {/* Messages */}
       {error && (
-        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-2">
-          <AlertCircle className="w-4 h-4" />
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {success && (
-        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 text-sm">
-          {success}
-        </div>
+        <Alert className="border-green-500/20 bg-green-500/10">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-600">{success}</AlertDescription>
+        </Alert>
       )}
 
       {/* Q&A List */}
@@ -207,7 +216,7 @@ export function QAManager() {
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(qa._id, qa.question)}
+                      onClick={() => handleDelete(qa)}
                       className="p-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
                       aria-label="Delete Q&A"
                     >
@@ -263,10 +272,10 @@ export function QAManager() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {error && (
-                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  {error}
-                </div>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
 
               <div className="space-y-2">
@@ -326,6 +335,17 @@ export function QAManager() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog({ open, qa: null })}
+        title="Delete Q&A Pair"
+        description={`Are you sure you want to delete this Q&A pair?\n\nQuestion: "${deleteDialog.qa?.question}"\n\nThis action cannot be undone.`}
+        onConfirm={confirmDelete}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Upload, Trash2, FileText, Loader2, AlertCircle } from 'lucide-react';
-import apiClient from '../../lib/axios';
+import { Upload, Trash2, FileText, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import apiClient from '@/lib/axios';
+import { AlertDialog } from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Document {
   _id: string;
@@ -19,6 +21,10 @@ export function DocumentManager() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; document: Document | null }>({
+    open: false,
+    document: null,
+  });
 
   useEffect(() => {
     fetchDocuments();
@@ -28,7 +34,7 @@ export function DocumentManager() {
     setLoading(true);
     setError('');
     try {
-      const response = await apiClient.get('/documents');
+      const response = await apiClient.get('/api/documents');
       if (response.data.status === 'success') {
         setDocuments(response.data.data.documents);
       }
@@ -85,12 +91,14 @@ export function DocumentManager() {
   };
 
   const handleDelete = async (id: string, fileName: string) => {
-    if (!confirm(`Are you sure you want to delete "${fileName}"?`)) {
-      return;
-    }
+    setDeleteDialog({ open: true, document: { _id: id, fileName } as Document });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteDialog.document) return;
 
     try {
-      await apiClient.delete(`/documents/${id}`);
+      await apiClient.delete(`/api/documents/${deleteDialog.document._id}`);
       setSuccess('Document deleted successfully!');
       fetchDocuments();
       setTimeout(() => setSuccess(''), 3000);
@@ -116,16 +124,17 @@ export function DocumentManager() {
         <h2 className="text-lg font-semibold text-card-foreground mb-4">Upload Document</h2>
         
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" />
-            {error}
-          </div>
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {success && (
-          <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 text-sm">
-            {success}
-          </div>
+          <Alert className="mb-4 border-green-500/20 bg-green-500/10">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-600">{success}</AlertDescription>
+          </Alert>
         )}
 
         <div className="flex flex-col sm:flex-row gap-3">
@@ -236,6 +245,17 @@ export function DocumentManager() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog({ open, document: null })}
+        title="Delete Document"
+        description={`Are you sure you want to delete "${deleteDialog.document?.fileName}"? This action cannot be undone.`}
+        onConfirm={confirmDelete}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }
