@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { ChatbotVisual } from './ChatbotVisual';
-import { Shield, Clock, Database } from 'lucide-react';
+import { Clock, Database } from 'lucide-react';
 
 export function HeroSection() {
   return (

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import apiClient from '@/lib/axios';
 
 export type Message = {
   id: string;
@@ -57,7 +56,7 @@ export function useChat() {
       const decoder = new TextDecoder();
       let buffer = "";
       let accumulatedContent = "";
-      let parsedSuggestedQuestions = null;
+      let parsedSuggestedQuestions: string[] | null = null;
 
       while (true) {
         const { value, done } = await reader.read();
@@ -184,7 +183,7 @@ export function useChat() {
     }
   };
 
-  const markStreamComplete = (msgId: string) => {
+  const markStreamComplete = (_msgId: string) => {
     // Left empty or for future use since true streaming updates content directly
   };
 
